@@ -4,6 +4,7 @@ export class Page {
     name: string;
     views: string;
     responseSize: string;
+    index: string;
 
 
     constructor(country: string, blacklisted: boolean, name: string, views: string, responseSize: string) {

@@ -1,57 +1,33 @@
 import express = require("express");
-import * as fs from 'fs'
+import fs = require("fs");
 import {Page} from "./Classes/Page";
 import {Pages} from "./Classes/Pages";
-import {mergeSort} from "./Methods";
 import mongoose = require("mongoose");
-
 import {dbConnect} from "./db/db.tools";
 import {Schema} from "mongoose";
-const app = express();
+import serverRouters from "./server/api/api";
+import {RouterList} from "./Classes/RouterList";
+import cors = require("cors");
+// import * as cors from "cors";
+import * as cookieParser from 'cookie-parser';
+import * as bodyParser from "body-parser";
 
-const createPage = (y, line2, line1Tmp, line2Tmp, langTmp): Page => {
-    let x = y + 1;
-    while (line2[x] !== ' ') {
-        x++;
-    }
-    let views = line2.slice(y + 1, x);
-    let responseSize = line2[x + 1];
-    if (line1Tmp && line1Tmp === line2Tmp)
-        return new Page(langTmp, true, line2Tmp, views, responseSize);
-    else
-        return new Page(langTmp, false, line2Tmp, views, responseSize);
-}
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(express.json());
+app.use(express.urlencoded({extended: false}));
+app.use(cookieParser());
+serverRouters.forEach((router: RouterList) => {
+    app.use(router.apiName, router.routerApi);
+})
 const isAnotherProject = (str) => {
     if (str.includes('.')) {
         return true
     }
     return false;
-}
-const isBlacklisted = (line1, line2): Page => {
-    let i = 0;
-    let langTmp = '';
-    while (line1[i] !== ' ') {
-        langTmp += line1[i];
-        i++;
-    }
-    if (!isAnotherProject(langTmp)) {
-        let y = i + 1;
-        while (line1[y] !== ' ') {
-            y++;
-        }
-        //Checking the blacklist file by country code
-        if (line2.includes(langTmp + ' ')) {
-            let line2Tmp = line2.slice(i + 1, line1.length);
-            let line1Tmp = line1.slice(i + 1, y);
-            return createPage(y, line1, line2Tmp, line1Tmp, langTmp);
-        } else {
-            //if we're here, the country is not blacklisted
-            let line1Tmp = line1.slice(i + 1, y);
-            return createPage(y, line1, undefined, line1Tmp, langTmp);
-        }
-    } else {
-        return null;
-    }
 }
 const parseLine = (line): Page => {
     let page: Page;
@@ -59,8 +35,31 @@ const parseLine = (line): Page => {
     page = new Page(parsedPage.country, parsedPage.blacklisted, parsedPage.name, parsedPage.views, parsedPage.responseSize);
     return page;
 }
-const orderByCountry = (filename: string, isBlacklisted: boolean): Array<Pages> => {
-    let lines = fs.readFileSync(filename, 'utf-8').split('\n').filter(Boolean);
+const createPage = (i, line, langTmp, isBlacklisted): Page => {
+    let pageName;
+    if (isBlacklisted) {
+        pageName = line.slice(i + 1, line.length);
+        return new Page(langTmp, isBlacklisted, pageName, null, null);
+    }
+    let y = i + 1;
+    while (line[y] !== ' ') {
+        y++;
+    }
+    pageName = line.slice(i + 1, y);
+    let x = y + 1;
+    while (line[x] !== ' ') {
+        x++;
+    }
+    let views = line.slice(y + 1, x);
+    let responseSize = line[x + 1];
+    return new Page(langTmp, isBlacklisted, pageName, views, responseSize);
+}
+const orderByCountry = (filename: string, isBlacklisted: boolean, pageviews: []): Array<Pages> => {
+    let lines;
+    if (pageviews === null)
+        lines = fs.readFileSync(filename, 'utf-8').split('\n');
+    else
+        lines = pageviews;
     let arrayCountries: Page[] = [];
     let nextCountry = '';
     let allArrayCountries: Array<Pages> = new Array<Pages>();
@@ -75,25 +74,8 @@ const orderByCountry = (filename: string, isBlacklisted: boolean): Array<Pages> 
             i++;
         }
         if (!isAnotherProject(langTmp)) {
-            let pageName = line.slice(i + 1, line.length);
             let page: Page;
-            if (!isBlacklisted) {
-
-                let y = i + 1;
-                while (line[y] !== ' ') {
-                    y++;
-                }
-                pageName = line.slice(i + 1, y);
-                let z = y + 1;
-                while (line[z] !== ' ') {
-                    z++;
-                }
-                let views = line.slice(y + 1, z);
-                let responseSize = line[z + 1];
-                page = new Page(langTmp, isBlacklisted, pageName, views, responseSize);
-            } else {
-                page = new Page(langTmp, isBlacklisted, pageName, null, null);
-            }
+            page = createPage(i, line, langTmp, isBlacklisted);
             if (lines[x + 1]) {
                 let c = 0;
                 while (lines[x + 1][c] !== ' ') {
@@ -129,103 +111,112 @@ const orderByCountry = (filename: string, isBlacklisted: boolean): Array<Pages> 
     }
     return allArrayCountries;
 }
-app.listen(3000, () => {
 
+export const compute = (pageviewsFilename, pageviews) => {
+    const blacklistedPages: Array<Pages> = orderByCountry('./files_diff/blacklist_domains_and_pages', true, null);
+    const listedPages = orderByCountry(null, false, pageviews);
 
-    let lines = fs.readFileSync('./files_diff/countries/listed/' + 'en' + '.txt', 'utf-8').split('\n');
-    let lines1 = fs.readFileSync('./files_diff/countries/listed/' + 'el' + '.txt', 'utf-8').split('\n');
-
-    const container: Page[] = [];
-    const container1: Page[] = [];
-    const parsedLines = JSON.parse(lines[0]);
-    const parsedLines1 = JSON.parse(lines1[0]);
-    parsedLines1.forEach(line1 => {
-        container1.push(parseLine(line1));
-    })
-    parsedLines.forEach(line => {
-        container.push(parseLine(line));
-    })
-
-    const pageSchema = new Schema({
-        country: {type: String},
-        blacklisted: {type: Boolean},
-        name: {type: String},
-        views: {type: String},
-        responseSize: {type: String}
-    })
-    const dbConnection = dbConnect('pageviews');
-    const Page = mongoose.model('en', pageSchema);
-    dbConnection.on('error', function (err) {
-        console.error(err);
+    console.log('Extracting data from files...');
+    blacklistedPages.forEach(a => {
+        fs.writeFileSync('./files_diff/countries/blacklisted/' + a.country + '.txt', JSON.stringify(a.pagesByCountry));
     });
-    dbConnection.once('open', function () {
-        Page.insertMany(container).then(res => {
-            console.log(res);
-            console.log('success');
-        }).catch(err => {
-            console.log('failure');
-            console.log(err);
-        })
-    })
-    // const promise1 = (): Promise<any> => {
-    //     return new Promise<any>((resolve, reject) => {
-    //         console.log('here1 ?')
-    //         resolve(mergeSort(container1));
-    //     })
-    // }
-    // const promise = (): Promise<any> => {
-    //     return new Promise<any>((resolve, reject) => {
-    //         console.log('here ?')
-    //         resolve(mergeSort(container));
-    //     })
-    // }
-    //
-    // console.log('nani?')
-    // const pr = promise();
-    // const pr1 = promise1();
-    // pr.then(ar => {
-    //     console.log('wsh')
-    //     ar.reverse();
-    //     const newArray = ar.slice(0, 25);
-    //     console.log(newArray);
-    //     console.log(newArray.length);
-    //     console.log('doney');
-    // })
-    // pr1.then(ar => {
-    //     console.log('wsh1')
-    //     ar.reverse();
-    //     const newArray = ar.slice(0, 25);
-    //     console.log(newArray);
-    //     console.log(newArray.length);
-    //     console.log('doney1');
-    // })
-    // const promise: Promise<any> = new Promise<any>((resolve, reject) => {
-    //     resolve(mergeSort(container));
-    // })
-    // console.log(container);
-    // const m = mergeSort(container);
-    // m.reverse();
-    // const newArray = m.slice(0, 25);
-    // console.log(newArray);
-    // console.log(newArray.length);
-    console.log('done');
-    // console.log(newArray);
-    // console.log(ar[0]);
-    // console.log(ar[1]);
-    // const m = mergeSort(ar);
-    // console.log(m);
-    // const blacklistedPages: Array<Pages> = orderByCountry('./files_diff/blacklist_domains_and_pages', true);
-    // const listedPages = orderByCountry('./files_diff/pageviews-20210501-000000', false);
-    //
-    // blacklistedPages.forEach(a => {
-    //     fs.writeFileSync('./files_diff/countries/blacklisted/' + a.country + '.txt', JSON.stringify(a.pagesByCountry));
-    // })
-    // listedPages.forEach(a => {
-    //     if (a.country === 'ace') {
-    //         let lines = fs.readFileSync('./files_diff/countries/blacklisted/' + a.country + '.txt', 'utf-8').split('\n').filter(Boolean);
-    //
-    //     }
-    //
-    //     fs.writeFileSync('./files_diff/countries/listed/' + a.country + '.txt', JSON.stringify(a.pagesByCountry));
-    // })
+    listedPages.forEach(a => {
+        fs.writeFileSync('./files_diff/countries/listed/' + a.country + '.txt', JSON.stringify(a.pagesByCountry));
+    });
+
+    console.log('Data extracted. Computing...');
+
+    fs.readdir('./files_diff/countries/listed', (err, files) => {
+        files.forEach(file => {
+            const country = file.split('.')[0];
+            const filePathListed = './files_diff/countries/listed/' + file;
+            const filePathBlacklisted = './files_diff/countries/blacklisted/' + file;
+            let lines = fs.readFileSync(filePathListed, 'utf-8');
+            let blacklistedLines = undefined;
+            try {
+                if (fs.existsSync(filePathBlacklisted)) {
+                    blacklistedLines = fs.readFileSync(filePathBlacklisted, 'utf-8');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+
+            let container = {};
+            const container_0: Page[] = [];
+            let container1: Page[] = [];
+            const parsedLines = JSON.parse(lines[0]);
+            parsedLines.forEach(line => {
+                const parsedLine: Page = parseLine(line);
+                container[parsedLine.name] = parsedLine;
+            });
+            console.log('Removing blacklisted pages for country ' + country + '...')
+
+
+            if (blacklistedLines) {
+                const blacklistedContainer = {};
+                const parsedBlacklistedLines = JSON.parse(blacklistedLines[0]);
+                parsedBlacklistedLines.forEach(bLines => {
+                    const parsedBline: Page = parseLine(bLines);
+                    blacklistedContainer[parsedBline.name] = parsedBline;
+                });
+                for (const [key, value] of Object.entries(blacklistedContainer)) {
+                    if (container[key]) {
+                        delete container[key];
+                    }
+                }
+            }
+
+            console.log('Blacklisted pages removed for country ' + country + '...');
+
+            console.log('Getting top 25 page views for country ' + country + '...')
+            let l = 25;
+            let largestView = 0;
+            while (l > 0) {
+                for (const [key, value] of Object.entries(container)) {
+                    const p: Page = parseLine(value);
+                    if (parseInt(p.views) > largestView) {
+                        largestView = parseInt(p.views);
+                        p['index'] = key;
+                        container1.push(p);
+                    }
+                }
+                let p = 0;
+                while (p < container1.length) {
+                    if (largestView === parseInt(container1[p].views)) {
+                        const tmp = {...container[container1[p]['index']]};
+                        container_0.push(tmp);
+                        delete container[container1[p]['index']];
+                    }
+                    p++;
+                }
+                container1 = [];
+                largestView = 0;
+                l--;
+            }
+            let fileName = './files_diff/countries/results/' + country + '.json';
+            fs.writeFileSync(fileName, JSON.stringify(container_0));
+            console.log('Top 25 pages for country : ' + country + ' have been written to file : ' + fileName + '.');
+            fs.readdir('./files_diff/countries/listed', (err, files) => {
+                files.forEach(file => {
+                    fs.rm('./files_diff/countries/listed' + file, (err) => {
+                        console.log(err);
+                    })
+                })
+            })
+            fs.readdir('./files_diff/countries/blacklisted', (err, files) => {
+                files.forEach(file => {
+                    fs.rm('./files_diff/countries/blacklisted' + file, (err) => {
+                        console.log(err);
+                    })
+                })
+            })
+            fs.rm('./files_diff' + pageviewsFilename, (err) => {
+                console.log(err);
+            })
+        });
+    });
+}
+app.listen(3001, () => {
+
+
 })
