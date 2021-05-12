@@ -54,12 +54,8 @@ const createPage = (i, line, langTmp, isBlacklisted): Page => {
     let responseSize = line[x + 1];
     return new Page(langTmp, isBlacklisted, pageName, views, responseSize);
 }
-const orderByCountry = (filename: string, isBlacklisted: boolean, pageviews: []): Array<Pages> => {
-    let lines;
-    if (pageviews === null)
-        lines = fs.readFileSync(filename, 'utf-8').split('\n');
-    else
-        lines = pageviews;
+const orderByCountry = (filename: string, isBlacklisted: boolean): Array<Pages> => {
+    let lines = fs.readFileSync(filename, 'utf-8').split('\n').filter(Boolean);
     let arrayCountries: Page[] = [];
     let nextCountry = '';
     let allArrayCountries: Array<Pages> = new Array<Pages>();
@@ -112,9 +108,9 @@ const orderByCountry = (filename: string, isBlacklisted: boolean, pageviews: [])
     return allArrayCountries;
 }
 
-export const compute = (pageviewsFilename, pageviews) => {
-    const blacklistedPages: Array<Pages> = orderByCountry('./files_diff/blacklist_domains_and_pages', true, null);
-    const listedPages = orderByCountry(null, false, pageviews);
+export const compute = (pageviewsFilename) => {
+    const blacklistedPages: Array<Pages> = orderByCountry('./files_diff/blacklist_domains_and_pages', true);
+    const listedPages = orderByCountry('./files_diff/' + pageviewsFilename, false);
 
     console.log('Extracting data from files...');
     blacklistedPages.forEach(a => {
@@ -131,11 +127,11 @@ export const compute = (pageviewsFilename, pageviews) => {
             const country = file.split('.')[0];
             const filePathListed = './files_diff/countries/listed/' + file;
             const filePathBlacklisted = './files_diff/countries/blacklisted/' + file;
-            let lines = fs.readFileSync(filePathListed, 'utf-8');
+            let lines = fs.readFileSync(filePathListed, 'utf-8').split('\n');
             let blacklistedLines = undefined;
             try {
                 if (fs.existsSync(filePathBlacklisted)) {
-                    blacklistedLines = fs.readFileSync(filePathBlacklisted, 'utf-8');
+                    blacklistedLines = fs.readFileSync(filePathBlacklisted, 'utf-8').split('\n');
                 }
             } catch (err) {
                 console.error(err);
@@ -193,30 +189,25 @@ export const compute = (pageviewsFilename, pageviews) => {
                 largestView = 0;
                 l--;
             }
-            let fileName = './files_diff/countries/results/' + country + '.json';
+            let fileName = './files_diff/countries/results/'+ pageviewsFilename + '/' + country + '.json';
             fs.writeFileSync(fileName, JSON.stringify(container_0));
             console.log('Top 25 pages for country : ' + country + ' have been written to file : ' + fileName + '.');
-            fs.readdir('./files_diff/countries/listed', (err, files) => {
-                files.forEach(file => {
-                    fs.rm('./files_diff/countries/listed' + file, (err) => {
-                        console.log(err);
-                    })
-                })
-            })
-            fs.readdir('./files_diff/countries/blacklisted', (err, files) => {
-                files.forEach(file => {
-                    fs.rm('./files_diff/countries/blacklisted' + file, (err) => {
-                        console.log(err);
-                    })
-                })
-            })
-            fs.rm('./files_diff' + pageviewsFilename, (err) => {
-                console.log(err);
-            })
         });
     });
+
+    fs.readdir('./files_diff/countries/listed', (err, files) => {
+        files.forEach(file => {
+            fs.unlinkSync('./files_diff/countries/listed/' + file)
+        })
+    })
+    fs.readdir('./files_diff/countries/blacklisted', (err, files) => {
+        files.forEach(file => {
+            fs.unlinkSync('./files_diff/countries/blacklisted/' + file)
+        })
+    })
+    fs.unlinkSync('./files_diff/' + pageviewsFilename)
 }
 app.listen(3001, () => {
 
-
+    // compute('');
 })
