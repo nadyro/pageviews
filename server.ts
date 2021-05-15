@@ -169,9 +169,12 @@ export const compute = async (pageviewsFilename) => {
                 while (l > 0) {
                     for (const [key, value] of Object.entries(container)) {
                         const p = value;
+                        // @ts-ignore: property 'views' does not exist on type 'unknown'
                         if (parseInt(p.views) > largestView) {
+                            // @ts-ignore: property 'views' does not exist on type 'unknown'
                             largestView = parseInt(p.views);
                             p['index'] = key;
+                            // @ts-ignore: Argument of type 'unknown' is not assignable to parameter of type 'Page'
                             container1.push(p);
                         }
                     }
