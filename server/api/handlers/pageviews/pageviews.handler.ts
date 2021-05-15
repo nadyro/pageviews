@@ -10,3 +10,12 @@ export const getPageviews = async (req: express.Request, res: express.Response) 
         console.error(e);
     }
 }
+
+export const getPageResults = async (req: express.Request, res: express.Response) => {
+    try {
+        const pageviewsController = new PageviewsController();
+        pageviewsController.getPageResults(req, res);
+    } catch (e) {
+        console.error(e);
+    }
+}
