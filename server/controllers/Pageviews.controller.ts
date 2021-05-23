@@ -69,7 +69,7 @@ export class PageviewsController {
         return arrayAllPagesByCountry;
     }
 
-    private ungzipAndCompute = async (fileName: string, dateTimeFormat: DateTimeFormat) => {
+    private ungzipAndCompute = async (fileName: string, dateTimeFormat: DateTimeFormat, param?: any) => {
         /**
          * Since Request is deprecated and no longer supported, I found a very good alternative which is Got.
          * */
@@ -94,7 +94,7 @@ export class PageviewsController {
                 statusEventEmitter.emit(EventTypes.writingDone, 'All writes are now complete.');
                 // Starts computing when the pageview file is ready
                 if (fs.existsSync(FILES_DIFF + fileName))
-                    compute(fileName, dateTimeFormat.user);
+                    compute(fileName, dateTimeFormat.user, param);
             })
         }));
     }
@@ -210,6 +210,7 @@ export class PageviewsController {
             })
         } else {
             // Condition that checks if any file among those requested already exists in server.
+            console.log(dateRange.dateArray);
             for (const da of dateRange.dateArray) {
                 const fileName = pageViewsPrefix + da.year + da.month + da.day + '-' + da.hour + '0000';
                 // If the operation for the same date and time has already been done, sends it immediately.
@@ -227,11 +228,21 @@ export class PageviewsController {
                         const gotStreamForBlacklist = got.stream(blacklistUrl);
                         // Once blacklist file is dl, ungzip and compute
                         gotStreamForBlacklist.pipe(fs.createWriteStream(FILES_DIFF + BLACKLIST_FILE)).on('finish', async () => {
-                            await this.ungzipAndCompute(fileName, dateTimeFormat);
+                            await this.ungzipAndCompute(fileName, dateTimeFormat, secondRequest === '3' ? secondRequest : undefined);
                         });
+                        if (secondRequest === '3') {
+                            res.send({
+                                waiting: 'waiting'
+                            })
+                        }
                     } else {
                         // directly ungzip and compute
-                        await this.ungzipAndCompute(fileName, dateTimeFormat);
+                        await this.ungzipAndCompute(fileName, dateTimeFormat,  secondRequest === '3' ? secondRequest : undefined);
+                        if (secondRequest === '3') {
+                            res.send({
+                                waiting: 'waiting'
+                            })
+                        }
                     }
                 }
             }

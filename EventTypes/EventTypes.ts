@@ -31,4 +31,7 @@ export const EventTypes = {
 
     // Event fired when download is complete and write is done
     writingDone: 'WRITING_DONE',
+
+    // Event fired when profile download is done
+    endOfDownload: 'END_OF_DOWNLOAD',
 }

@@ -90,9 +90,14 @@ export const sockets = (server: Server, eventEmitter: EventEmitter) => {
          *
          * */
         eventEmitter.on(EventTypes.endOfWrite, objEmitted => {
-            serverUtils.getUser(objEmitted.user._id).then(() => {
-                io.to(socket.id).emit(EventTypes.endOfWrite, 'endOfWrite');
-            });
+
+                serverUtils.getUser(objEmitted.user._id).then(() => {
+                    if (objEmitted.param === undefined) {
+                        io.to(socket.id).emit(EventTypes.endOfWrite, 'endOfWrite');
+                    } else {
+                        io.to(socket.id).emit(EventTypes.endOfDownload, 'endOfDownload');
+                    }
+                });
 
             // Upon end of write, delete all unnecessary files from the server.
             fs.readdir(filePaths.FILES_DIFF + filePaths.LISTED_COUNTRIES, (err, files) => {

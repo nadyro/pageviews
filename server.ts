@@ -46,7 +46,7 @@ app.use(cookieParser());
 serverRouters.forEach((router: RouterList) => {
     app.use(router.apiName, router.routerApi);
 });
-// app.use(express.static(__dirname + '/dist/pageviews-front'));
+app.use(express.static(__dirname + '/dist/pageviews-front'));
 
 const isAnotherProject = (str: string) => {
     return !!str.includes('.');
@@ -196,8 +196,9 @@ const orderByCountry = (filename: string, isBlacklisted: boolean): Array<any> =>
  *
  * @param pageviewsFilename the name of the pageview file that was downloaded and ungziped.
  * @param user the connected user that requested the pageview.
+ * @param param parameter defined on download from profile
  * */
-export const compute = (pageviewsFilename: string, user: User): any => {
+export const compute = (pageviewsFilename: string, user: User, param: any): any => {
     // Ordering the blacklisted pages by country
     const blacklistedPages = orderByCountry(FILES_DIFF + BLACKLIST_FILE, true);
     // Ordering the listed pages by country
@@ -382,7 +383,7 @@ export const compute = (pageviewsFilename: string, user: User): any => {
             })
             setTimeout(() => {
                 // Timeout to make sure that the socket reconnection signal happens before the emition of the end signal.
-                const objToEmit = {user: user, pageviewsFilename: pageviewsFilename};
+                const objToEmit = {user: user, pageviewsFilename: pageviewsFilename, param: param};
                 eventEmitter.emit(EventTypes.endOfWrite, objToEmit);
 
             }, 10000)
