@@ -4,17 +4,25 @@ import {PageviewsController} from "../../../controllers/Pageviews.controller";
 export const getPageviews = async (req: express.Request, res: express.Response) => {
     try {
         const pageviewsController = new PageviewsController();
-        console.log(req.body);
         pageviewsController.getPageviews(req, res);
     } catch (e) {
         console.error(e);
     }
 }
 
-export const getPageResults = async (req: express.Request, res: express.Response) => {
+export const getSavedPageViewsForUser = async (req: express.Request, res: express.Response) => {
     try {
         const pageviewsController = new PageviewsController();
-        pageviewsController.getPageResults(req, res);
+        pageviewsController.getSavedPageViewsForUser(req, res);
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+export const getPageView = async (req: express.Request, res: express.Response) => {
+    try {
+        const pageviewsController = new PageviewsController();
+        pageviewsController.getPageView(req, res);
     } catch (e) {
         console.error(e);
     }

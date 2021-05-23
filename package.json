@@ -3,12 +3,18 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "start": "mongod --dbpath data/db --fork --logpath ./mongod.log && redis-server --daemonize yes && ts-node-dev server.ts --respawn --transpileOnly",
+    "dev": "ts-node-dev --respawn --watch *.ts",
+    "test": "mocha"
   },
   "dependencies": {
+    "@types/bcrypt": "^5.0.0",
+    "@types/connect-redis": "0.0.16",
+    "@types/cookie-parser": "^1.4.2",
     "@types/cors": "^2.8.10",
     "@types/crypto-js": "^4.0.1",
     "@types/diff": "^5.0.0",
+    "@types/express-session": "^1.17.3",
     "@types/line-reader": "0.0.33",
     "@types/method-override": "0.0.31",
     "@types/mongodb": "^3.6.12",
@@ -17,8 +23,12 @@
     "@types/multer-gridfs-storage": "^4.0.1",
     "@types/node": "^15.0.2",
     "@types/node-gzip": "^1.1.0",
+    "@types/redis": "^2.8.28",
+    "bcrypt": "^5.0.1",
     "bfj": "^7.0.2",
+    "chai": "^4.3.4",
     "colors": "^1.4.0",
+    "connect-redis": "^5.2.0",
     "cookie-parser": "^1.4.5",
     "cors": "^2.8.5",
     "crypto-js": "^4.0.0",
@@ -26,10 +36,12 @@
     "decompress-response": "^7.0.0",
     "diff": "^5.0.0",
     "express": "~4.16.1",
+    "express-session": "^1.17.1",
     "got": "^11.8.2",
     "http-errors": "~1.6.3",
     "line-reader": "^0.4.0",
     "method-override": "^3.0.0",
+    "mocha": "^8.4.0",
     "mongodb": "^3.6.6",
     "mongoose": "^5.12.8",
     "morgan": "~1.9.1",
@@ -37,10 +49,15 @@
     "multer-gridfs-storage": "^4.2.0",
     "node-gzip": "^1.1.2",
     "pug": "2.0.0-beta11",
+    "redis": "^3.1.2",
+    "request": "^2.88.2",
     "socket.io": "^4.1.1",
     "text-file-diff": "^1.4.6",
     "ts": "^0.2.2",
     "ts-node-dev": "^1.1.6",
     "typescript": "^4.2.4"
+  },
+  "devDependencies": {
+    "@tsconfig/recommended": "^1.0.1"
   }
 }

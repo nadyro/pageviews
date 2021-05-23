@@ -1,0 +1,9 @@
+export const FILES_DIFF = './files_diff/';
+export const COUNTRIES = 'countries/';
+export const LISTED_COUNTRIES = 'countries/listed/';
+export const BLACKLISTED_COUNTRIES = 'countries/blacklisted/';
+export const pageViewsPrefix = 'pageviews-';
+export const RESULTS = 'countries/results/';
+export const RESULTS_ALL = 'all-results/';
+export const BLACKLIST_FILE = 'blacklist_domains_and_pages';
+export const TOP_MAX: number = 25;
